@@ -26,6 +26,7 @@ local defaultSettings = {
 	sortKeys = true;
 	autoReferences = true,
 	referenceTolerance = 0.001,
+	references = {}
 }
 
 -- lua keywords
@@ -340,7 +341,7 @@ local function repr(value, reprSettings)
 		elseif typeof(v) == "Vector2int16" then
 			return ("Vector2int16.new(%d, %d)"):format(v.X, v.Y)
 		elseif typeof and typeof(v) == "Vector3" then
-			local ref = formatVector3Reference(value, settings.references, settings.referenceTolerance)
+			local ref = formatVector3Reference(value, {reprSettings.references, reprSettings.referenceTolerance})
 			if ref then return ref end
 			return ("Vector3.new(%s, %s, %s)"):format(value.X, value.Y, value.Z)
 		elseif typeof(v) == "Vector3int16" then
