@@ -14,27 +14,24 @@ local myTable = {
 print(repr(myTable)) --> {hello = "world", isCool = true, score = 5}
  
 ]]
-
+ 
 local defaultSettings = {
-	pretty = false;
-	robloxFullName = false;
+	pretty = true;
+	robloxFullName = true;
 	robloxProperFullName = true;
 	robloxClassName = true;
-	tabs = false;
-	semicolons = false;
+	tabs = true;
+	semicolons = true;
 	spaces = 3;
 	sortKeys = true;
-	autoReferences = true,
-	referenceTolerance = 0.001,
-	references = {}
 }
-
+ 
 -- lua keywords
 local keywords = {["and"]=true, ["break"]=true, ["do"]=true, ["else"]=true,
-	["elseif"]=true, ["end"]=true, ["false"]=true, ["for"]=true, ["function"]=true,
-	["if"]=true, ["in"]=true, ["local"]=true, ["nil"]=true, ["not"]=true, ["or"]=true,
-	["repeat"]=true, ["return"]=true, ["then"]=true, ["true"]=true, ["until"]=true, ["while"]=true}
-
+["elseif"]=true, ["end"]=true, ["false"]=true, ["for"]=true, ["function"]=true,
+["if"]=true, ["in"]=true, ["local"]=true, ["nil"]=true, ["not"]=true, ["or"]=true,
+["repeat"]=true, ["return"]=true, ["then"]=true, ["true"]=true, ["until"]=true, ["while"]=true}
+ 
 local function isLuaIdentifier(str)
 	if type(str) ~= "string" then return false end
 	-- must be nonempty
@@ -47,85 +44,40 @@ local function isLuaIdentifier(str)
 	if keywords[str] then return false end
 	return true
 end
-
+ 
 -- works like Instance:GetFullName(), but invalid Lua identifiers are fixed (e.g. workspace["The Dude"].Humanoid)
 local function properFullName(object, usePeriod)
 	if object == nil or object == game then return "" end
-
+	
 	local s = object.Name
 	local usePeriod = true
 	if not isLuaIdentifier(s) then
 		s = ("[%q]"):format(s)
 		usePeriod = false
 	end
-
+	
 	if not object.Parent or object.Parent == game then
 		return s
 	else
 		return properFullName(object.Parent) .. (usePeriod and "." or "") .. s 
 	end
 end
-
-local function buildAutoReferences()
-	local references = {}
-	for _, instance in ipairs(workspace:GetDescendants()) do
-		if instance:IsA("BasePart") then
-			local key = properFullName(instance)
-			references[instance.Position] = key .. ".Position"
-		end
-	end
-	return references
-end
-
+ 
 local depth = 0
 local shown
 local INDENT
-local AUTO_REFS = nil
 local reprSettings
-
-local function vector3AlmostEqual(a, b, tolerance)
-	return (a - b).Magnitude <= tolerance
-end
-
-local function formatVector3Reference(value, settings)
-	local refs = settings.references or {}
-	if settings.autoReferences then
-		if not AUTO_REFS then
-			AUTO_REFS = buildAutoReferences()
-		end
-		for k, v in pairs(AUTO_REFS) do
-			refs[k] = v
-		end
-	end
-
-	for refValue, refName in pairs(refs) do
-		if typeof(refValue) == "Vector3" then
-			local offset = value - refValue
-			if offset.Magnitude <= (settings.referenceTolerance or 1e-4) then
-				if offset.Magnitude == 0 then
-					return refName
-				else
-					return ("%s + Vector3.new(%s, %s, %s)"):format(
-						refName, offset.X, offset.Y, offset.Z
-					)
-				end
-			end
-		end
-	end
-	return nil
-end
-
-
+ 
 local function repr(value, reprSettings)
 	reprSettings = reprSettings or defaultSettings
 	INDENT = (" "):rep(reprSettings.spaces or defaultSettings.spaces)
 	if reprSettings.tabs then
 		INDENT = "\t"
 	end
-
+	
 	local v = value --args[1]
 	local tabs = INDENT:rep(depth)
-
+	
 	if depth == 0 then
 		shown = {}
 	end
@@ -199,7 +151,7 @@ local function repr(value, reprSettings)
 		if typeof(v) == "Instance" then
 			return  (reprSettings.robloxFullName
 				and (reprSettings.robloxProperFullName and properFullName(v) or v:GetFullName())
-				or v.Name) .. (reprSettings.robloxClassName and ((" (%s)"):format(v.ClassName)) or "")
+			 or v.Name) .. (reprSettings.robloxClassName and ((" (%s)"):format(v.ClassName)) or "")
 		elseif typeof(v) == "Axes" then
 			local s = {}
 			if v.X then table.insert(s, repr(Enum.Axis.X, reprSettings)) end
@@ -209,22 +161,8 @@ local function repr(value, reprSettings)
 		elseif typeof(v) == "BrickColor" then
 			return ("BrickColor.new(%q)"):format(v.Name)
 		elseif typeof(v) == "CFrame" then
-			if reprSettings.references then
-				for refValue, refName in pairs(reprSettings.references) do
-					if typeof(refValue) == "CFrame" and refValue == v then
-						return refName
-					end
-				end
-			end
 			return ("CFrame.new(%s)"):format(table.concat({v:GetComponents()}, ", "))
 		elseif typeof(v) == "Color3" then
-			if reprSettings.references then
-				for refValue, refName in pairs(reprSettings.references) do
-					if typeof(refValue) == "Color3" and refValue == v then
-						return refName
-					end
-				end
-			end
 			return ("Color3.new(%d, %d, %d)"):format(v.r, v.g, v.b)
 		elseif typeof(v) == "ColorSequence" then
 			if #v.Keypoints > 2 then
@@ -340,10 +278,8 @@ local function repr(value, reprSettings)
 			return ("Vector2.new(%d, %d)"):format(v.X, v.Y)
 		elseif typeof(v) == "Vector2int16" then
 			return ("Vector2int16.new(%d, %d)"):format(v.X, v.Y)
-		elseif typeof and typeof(v) == "Vector3" then
-			local ref = formatVector3Reference(value, {reprSettings.references, reprSettings.referenceTolerance})
-			if ref then return ref end
-			return ("Vector3.new(%s, %s, %s)"):format(value.X, value.Y, value.Z)
+		elseif typeof(v) == "Vector3" then
+			return ("Vector3.new(%d, %d, %d)"):format(v.X, v.Y, v.Z)
 		elseif typeof(v) == "Vector3int16" then
 			return ("Vector3int16.new(%d, %d, %d)"):format(v.X, v.Y, v.Z)
 		elseif typeof(v) == "DateTime" then
@@ -355,5 +291,5 @@ local function repr(value, reprSettings)
 		return "<" .. type(v) .. ">"
 	end
 end
-
+ 
 return repr
